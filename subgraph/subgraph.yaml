@@ -1,0 +1,31 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: RedPacket
+    network: sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000" # 部署后替换为实际合约地址
+      abi: RedPacket
+      startBlock: 0 # 部署区块号
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Packet
+        - Claim
+      abis:
+        - name: RedPacket
+          file: ./abis/RedPacket.json
+      eventHandlers:
+        - event: PacketCreated(indexed uint256,indexed address,uint256,uint256,bool,uint256)
+          handler: handlePacketCreated
+        - event: PacketClaimed(indexed uint256,indexed address,uint256,uint256)
+          handler: handlePacketClaimed
+        - event: PacketFinished(indexed uint256,uint256)
+          handler: handlePacketFinished
+        - event: AlreadyClaimed(indexed uint256,indexed address,uint256)
+          handler: handleAlreadyClaimed
+      file: ./src/mapping.ts

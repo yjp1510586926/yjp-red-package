@@ -1,0 +1,32 @@
+type Packet @entity {
+  id: ID!
+  packetId: BigInt!
+  creator: Bytes!
+  totalAmount: BigInt!
+  remainAmount: BigInt!
+  totalCount: BigInt!
+  remainCount: BigInt!
+  isRandom: Boolean!
+  timestamp: BigInt!
+  isFinished: Boolean!
+  claims: [Claim!]! @derivedFrom(field: "packet")
+  createdAt: BigInt!
+  finishedAt: BigInt
+}
+
+type Claim @entity {
+  id: ID!
+  packet: Packet!
+  claimer: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+}
+
+type User @entity {
+  id: ID!
+  address: Bytes!
+  packetsCreated: [Packet!]!
+  claimsMade: [Claim!]! @derivedFrom(field: "claimer")
+  totalClaimed: BigInt!
+  totalCreated: BigInt!
+}
