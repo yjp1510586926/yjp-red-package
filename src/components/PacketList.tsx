@@ -90,8 +90,8 @@ export const PacketList: React.FC<{ onSelect: (id: string) => void }> = ({ onSel
 
   useEffect(() => {
     fetchPackets()
-    // 每 10 秒刷新一次
-    const timer = setInterval(fetchPackets, 10000)
+    // 每 30 秒刷新一次
+    const timer = setInterval(fetchPackets, 30000)
     return () => clearInterval(timer)
   }, [])
 

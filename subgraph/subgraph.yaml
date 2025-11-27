@@ -8,7 +8,7 @@ dataSources:
     source:
       address: "0xB2e4C00c08dd3A0FeE409E3D906DEf1D585cF125"
       abi: RedPacket
-      startBlock: 0 # 部署区块号
+      startBlock: 7382000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
