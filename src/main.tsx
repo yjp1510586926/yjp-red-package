@@ -3,8 +3,16 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-//   <React.StrictMode>
+const root = ReactDOM.createRoot(document.getElementById('root')!)
+
+if (import.meta.env.MODE === 'production') {
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
+} else {
+  root.render(
     <App />
-//   </React.StrictMode>,
-)
+  )
+}
