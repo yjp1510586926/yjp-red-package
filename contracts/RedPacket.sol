@@ -30,6 +30,7 @@ contract RedPacket {
         uint256 totalCount;     // 红包总个数
         uint256 remainCount;    // 剩余个数
         uint256 timestamp;      // 创建时间
+        uint256 expirationTime; // 过期时间戳，0表示永不过期
         bool isRandom;          // 是否随机红包
         mapping(address => bool) claimed; // 记录已领取地址
     }
@@ -47,7 +48,8 @@ contract RedPacket {
         uint256 totalAmount,
         uint256 count,
         bool isRandom,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 expirationTime
     );
 
     event PacketClaimed(
@@ -68,12 +70,20 @@ contract RedPacket {
         uint256 timestamp
     );
 
+    event PacketRefunded(
+        uint256 indexed packetId,
+        address indexed creator,
+        uint256 amount,
+        uint256 timestamp
+    );
+
     /**
      * @dev 创建红包
      * @param count 红包个数
      * @param isRandom 是否随机红包
+     * @param duration 过期时长（秒），0表示永不过期
      */
-    function createPacket(uint256 count, bool isRandom) external payable {
+    function createPacket(uint256 count, bool isRandom, uint256 duration) external payable {
         require(msg.value > 0, "Amount must be greater than 0");
         require(count > 0, "Count must be greater than 0");
         require(msg.value >= count, "Amount too small for count");
@@ -87,6 +97,7 @@ contract RedPacket {
         packet.totalCount = count;
         packet.remainCount = count;
         packet.timestamp = block.timestamp;
+        packet.expirationTime = duration > 0 ? block.timestamp + duration : 0;
         packet.isRandom = isRandom;
 
         emit PacketCreated(
@@ -95,7 +106,8 @@ contract RedPacket {
             msg.value,
             count,
             isRandom,
-            block.timestamp
+            block.timestamp,
+            packet.expirationTime
         );
     }
 
@@ -108,6 +120,11 @@ contract RedPacket {
         
         require(packet.totalAmount > 0, "Packet does not exist");
         require(packet.remainCount > 0, "Packet is finished");
+        
+        // 检查是否过期
+        if (packet.expirationTime > 0 && block.timestamp > packet.expirationTime) {
+            revert("Packet has expired");
+        }
         
         // 检查是否已经领取过
         if (packet.claimed[msg.sender]) {
@@ -145,6 +162,31 @@ contract RedPacket {
         if (packet.remainCount == 0) {
             emit PacketFinished(packetId, block.timestamp);
         }
+    }
+
+    /**
+     * @dev 退款过期红包
+     * @param packetId 红包ID
+     */
+    function refundExpiredPacket(uint256 packetId) external nonReentrant {
+        Packet storage packet = packets[packetId];
+        
+        require(packet.totalAmount > 0, "Packet does not exist");
+        require(msg.sender == packet.creator, "Only creator can refund");
+        require(packet.expirationTime > 0, "Packet never expires");
+        require(block.timestamp > packet.expirationTime, "Packet not expired yet");
+        require(packet.remainAmount > 0, "No funds to refund");
+
+        uint256 refundAmount = packet.remainAmount;
+        packet.remainAmount = 0;
+        packet.remainCount = 0;
+
+        // 转账退款
+        (bool success, ) = payable(msg.sender).call{value: refundAmount}("");
+        require(success, "Refund transfer failed");
+
+        emit PacketRefunded(packetId, msg.sender, refundAmount, block.timestamp);
+        emit PacketFinished(packetId, block.timestamp);
     }
 
     /**
@@ -191,6 +233,7 @@ contract RedPacket {
         uint256 totalCount,
         uint256 remainCount,
         uint256 timestamp,
+        uint256 expirationTime,
         bool isRandom
     ) {
         Packet storage packet = packets[packetId];
@@ -201,6 +244,7 @@ contract RedPacket {
             packet.totalCount,
             packet.remainCount,
             packet.timestamp,
+            packet.expirationTime,
             packet.isRandom
         );
     }

@@ -26,7 +26,7 @@ export const WalletConnect: React.FC = () => {
 
   return (
     <div className="flex gap-3">
-      {connectors.map((connector) => (
+      {connectors.slice(0, 2).map((connector) => (
         <button
           key={connector.id}
           onClick={() => connect({ connector })}

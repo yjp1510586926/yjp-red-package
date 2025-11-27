@@ -11,6 +11,7 @@ interface PacketInfo {
   totalCount: bigint
   remainCount: bigint
   timestamp: bigint
+  expirationTime: bigint
   isRandom: boolean
 }
 
@@ -142,6 +143,8 @@ export const ClaimRedPacket: React.FC<ClaimRedPacketProps> = ({ selectedId }) =>
           ? '你已经抢过这个红包了' 
           : error.message.includes('Packet is finished')
           ? '红包已被抢完了'
+          : error.message.includes('Packet has expired')
+          ? '红包已过期'
           : `错误: ${error.message}`
       })
     }
@@ -225,10 +228,29 @@ export const ClaimRedPacket: React.FC<ClaimRedPacketProps> = ({ selectedId }) =>
               </span>
             </div>
             
+            {packetInfo.expirationTime > 0n && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm opacity-90">过期时间</span>
+                <span className="text-xs">
+                  {packetInfo.expirationTime > 0n && BigInt(Math.floor(Date.now() / 1000)) > packetInfo.expirationTime
+                    ? '⏰ 已过期'
+                    : new Date(Number(packetInfo.expirationTime) * 1000).toLocaleString('zh-CN')}
+                </span>
+              </div>
+            )}
+            
             {hasClaimed && (
               <div className="bg-yellow-500/20 border border-yellow-500 rounded-lg p-3 mt-3">
                 <p className="text-yellow-200 text-sm text-center">
                   ✅ 你已经领取过这个红包了
+                </p>
+              </div>
+            )}
+
+            {packetInfo.expirationTime > 0n && BigInt(Math.floor(Date.now() / 1000)) > packetInfo.expirationTime && (
+              <div className="bg-orange-500/20 border border-orange-500 rounded-lg p-3 mt-3">
+                <p className="text-orange-200 text-sm text-center">
+                  ⏰ 红包已过期
                 </p>
               </div>
             )}
@@ -245,7 +267,14 @@ export const ClaimRedPacket: React.FC<ClaimRedPacketProps> = ({ selectedId }) =>
 
         <button
           onClick={handleClaim}
-          disabled={isPending || isConfirming || !packetId || hasClaimed || (packetInfo?.remainCount === 0n)}
+          disabled={
+            isPending || 
+            isConfirming || 
+            !packetId || 
+            hasClaimed || 
+            (packetInfo?.remainCount === 0n) ||
+            (packetInfo?.expirationTime !== undefined && packetInfo.expirationTime > 0n && BigInt(Math.floor(Date.now() / 1000)) > packetInfo.expirationTime)
+          }
           className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending || isConfirming ? (

@@ -3,7 +3,7 @@ import { sepolia } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
 
 // 你需要在 WalletConnect Cloud 获取 projectId: https://cloud.walletconnect.com
-const projectId = "YOUR_WALLETCONNECT_PROJECT_ID";
+const projectId = "6b34a0eff998c7a65907ef58454314d0";
 
 export const config = createConfig({
   chains: [sepolia],
@@ -15,4 +15,4 @@ export const config = createConfig({
 
 // 合约地址 - 部署后需要更新
 export const RED_PACKET_ADDRESS =
-  "0x0000000000000000000000000000000000000000" as `0x${string}`;
+  "0xB2e4C00c08dd3A0FeE409E3D906DEf1D585cF125" as `0x${string}`;

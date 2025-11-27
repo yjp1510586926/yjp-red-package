@@ -9,6 +9,9 @@ export const CreateRedPacket: React.FC = () => {
   const [amount, setAmount] = useState('')
   const [count, setCount] = useState('')
   const [isRandom, setIsRandom] = useState(true)
+  const [hasExpiration, setHasExpiration] = useState(false)
+  const [expirationValue, setExpirationValue] = useState('24')
+  const [expirationUnit, setExpirationUnit] = useState<'hours' | 'days'>('hours')
 
   const { data: hash, writeContract, isPending, error } = useWriteContract()
 
@@ -24,12 +27,23 @@ export const CreateRedPacket: React.FC = () => {
       return
     }
 
+    // 计算过期时长（秒）
+    let duration = 0
+    if (hasExpiration && expirationValue) {
+      const value = parseInt(expirationValue)
+      if (expirationUnit === 'hours') {
+        duration = value * 3600 // 小时转秒
+      } else {
+        duration = value * 86400 // 天转秒
+      }
+    }
+
     try {
       writeContract({
         address: RED_PACKET_ADDRESS,
         abi: RED_PACKET_ABI,
         functionName: 'createPacket',
-        args: [BigInt(count), isRandom],
+        args: [BigInt(count), isRandom, BigInt(duration)],
         value: parseEther(amount),
       })
     } catch (err) {
@@ -42,6 +56,8 @@ export const CreateRedPacket: React.FC = () => {
       alert('红包创建成功！')
       setAmount('')
       setCount('')
+      setHasExpiration(false)
+      setExpirationValue('24')
     }
   }, [isSuccess])
 
@@ -114,6 +130,53 @@ export const CreateRedPacket: React.FC = () => {
               <span className="text-white">普通红包</span>
             </label>
           </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-gray-300">
+            过期时间
+          </label>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                checked={!hasExpiration}
+                onChange={() => setHasExpiration(false)}
+                className="w-4 h-4 text-red-600"
+              />
+              <span className="text-white">永不过期</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                checked={hasExpiration}
+                onChange={() => setHasExpiration(true)}
+                className="w-4 h-4 text-red-600"
+              />
+              <span className="text-white">自定义时间</span>
+            </label>
+          </div>
+          
+          {hasExpiration && (
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min="1"
+                value={expirationValue}
+                onChange={(e) => setExpirationValue(e.target.value)}
+                className="input-field flex-1"
+                placeholder="24"
+              />
+              <select
+                value={expirationUnit}
+                onChange={(e) => setExpirationUnit(e.target.value as 'hours' | 'days')}
+                className="input-field w-24"
+              >
+                <option value="hours">小时</option>
+                <option value="days">天</option>
+              </select>
+            </div>
+          )}
         </div>
 
         <button

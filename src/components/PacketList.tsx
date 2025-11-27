@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { formatEther } from 'viem'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { RED_PACKET_ABI } from '../contracts/RedPacketABI'
+import { RED_PACKET_ADDRESS } from '../config/wagmi'
 
 interface Packet {
   packetId: string
@@ -9,6 +12,7 @@ interface Packet {
   totalCount: string
   isRandom: boolean
   timestamp: string
+  expirationTime: string
   isFinished: boolean
 }
 
@@ -16,9 +20,13 @@ interface Packet {
 const SUBGRAPH_URL = import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/YOUR_ID/red-packet-sepolia/version/latest'
 
 export const PacketList: React.FC<{ onSelect: (id: string) => void }> = ({ onSelect }) => {
+  const { address } = useAccount()
   const [packets, setPackets] = useState<Packet[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const { data: hash, writeContract, isPending } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
   const fetchPackets = async () => {
     if (SUBGRAPH_URL.includes('YOUR_ID')) {
@@ -39,6 +47,7 @@ export const PacketList: React.FC<{ onSelect: (id: string) => void }> = ({ onSel
           totalCount
           isRandom
           timestamp
+          expirationTime
           isFinished
         }
       }
@@ -64,12 +73,39 @@ export const PacketList: React.FC<{ onSelect: (id: string) => void }> = ({ onSel
     }
   }
 
+  const handleRefund = async (packetId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    try {
+      writeContract({
+        address: RED_PACKET_ADDRESS,
+        abi: RED_PACKET_ABI,
+        functionName: 'refundExpiredPacket',
+        args: [BigInt(packetId)],
+      })
+    } catch (err) {
+      console.error('退款失败:', err)
+    }
+  }
+
   useEffect(() => {
     fetchPackets()
     // 每 10 秒刷新一次
     const timer = setInterval(fetchPackets, 10000)
     return () => clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (isSuccess) {
+      alert('退款成功！')
+      fetchPackets()
+    }
+  }, [isSuccess])
+
+  const isExpired = (expirationTime: string) => {
+    if (expirationTime === '0') return false
+    return Math.floor(Date.now() / 1000) > parseInt(expirationTime)
+  }
 
   if (SUBGRAPH_URL.includes('YOUR_ID')) {
     return (
@@ -102,40 +138,71 @@ export const PacketList: React.FC<{ onSelect: (id: string) => void }> = ({ onSel
         <div className="text-center py-4 text-gray-400">暂无待抢红包</div>
       ) : (
         <div className="space-y-3">
-          {packets.map((packet) => (
-            <div 
-              key={packet.packetId}
-              onClick={() => onSelect(packet.packetId)}
-              className="bg-gray-700/50 p-3 rounded-xl cursor-pointer hover:bg-gray-700 transition-colors border border-gray-600 hover:border-red-500/50 group"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">
-                    {packet.isRandom ? '🎲' : '📦'}
-                  </span>
-                  <div>
-                    <div className="text-white font-medium text-sm">
-                      {formatEther(BigInt(packet.totalAmount))} ETH
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      ID: {packet.packetId}
+          {packets.map((packet) => {
+            const expired = isExpired(packet.expirationTime)
+            const isCreator = address?.toLowerCase() === packet.creator.toLowerCase()
+            
+            return (
+              <div 
+                key={packet.packetId}
+                onClick={() => !expired && onSelect(packet.packetId)}
+                className={`bg-gray-700/50 p-3 rounded-xl border border-gray-600 transition-colors ${
+                  expired ? 'opacity-60' : 'cursor-pointer hover:bg-gray-700 hover:border-red-500/50 group'
+                }`}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">
+                      {packet.isRandom ? '🎲' : '📦'}
+                    </span>
+                    <div>
+                      <div className="text-white font-medium text-sm">
+                        {formatEther(BigInt(packet.totalAmount))} ETH
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        ID: {packet.packetId}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="bg-red-500/20 text-red-300 text-xs px-2 py-1 rounded-full">
+                      剩 {packet.remainCount}/{packet.totalCount}
+                    </span>
+                    {expired && (
+                      <span className="bg-orange-500/20 text-orange-300 text-xs px-2 py-1 rounded-full">
+                        ⏰ 已过期
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <span className="bg-red-500/20 text-red-300 text-xs px-2 py-1 rounded-full">
-                  剩 {packet.remainCount}/{packet.totalCount}
-                </span>
+                
+                {packet.expirationTime !== '0' && !expired && (
+                  <div className="text-xs text-gray-500 mb-2">
+                    过期时间: {new Date(parseInt(packet.expirationTime) * 1000).toLocaleString('zh-CN')}
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center text-xs text-gray-500">
+                  <span>
+                    {packet.creator.slice(0, 6)}...{packet.creator.slice(-4)}
+                  </span>
+                  {expired && isCreator ? (
+                    <button
+                      onClick={(e) => handleRefund(packet.packetId, e)}
+                      disabled={isPending || isConfirming}
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-lg text-xs disabled:opacity-50"
+                    >
+                      {isPending || isConfirming ? '退款中...' : '退款'}
+                    </button>
+                  ) : !expired ? (
+                    <span className="group-hover:text-red-400 transition-colors">
+                      点击抢红包 &rarr;
+                    </span>
+                  ) : null}
+                </div>
               </div>
-              <div className="flex justify-between items-center text-xs text-gray-500">
-                <span>
-                  {packet.creator.slice(0, 6)}...{packet.creator.slice(-4)}
-                </span>
-                <span className="group-hover:text-red-400 transition-colors">
-                  点击抢红包 &rarr;
-                </span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

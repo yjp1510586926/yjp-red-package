@@ -6,7 +6,7 @@ dataSources:
     name: RedPacket
     network: sepolia
     source:
-      address: "0x0000000000000000000000000000000000000000" # 部署后替换为实际合约地址
+      address: "0xB2e4C00c08dd3A0FeE409E3D906DEf1D585cF125"
       abi: RedPacket
       startBlock: 0 # 部署区块号
     mapping:
@@ -20,7 +20,7 @@ dataSources:
         - name: RedPacket
           file: ./abis/RedPacket.json
       eventHandlers:
-        - event: PacketCreated(indexed uint256,indexed address,uint256,uint256,bool,uint256)
+        - event: PacketCreated(indexed uint256,indexed address,uint256,uint256,bool,uint256,uint256)
           handler: handlePacketCreated
         - event: PacketClaimed(indexed uint256,indexed address,uint256,uint256)
           handler: handlePacketClaimed
@@ -28,4 +28,6 @@ dataSources:
           handler: handlePacketFinished
         - event: AlreadyClaimed(indexed uint256,indexed address,uint256)
           handler: handleAlreadyClaimed
+        - event: PacketRefunded(indexed uint256,indexed address,uint256,uint256)
+          handler: handlePacketRefunded
       file: ./src/mapping.ts

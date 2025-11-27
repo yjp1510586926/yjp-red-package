@@ -94,6 +94,12 @@ export const RED_PACKET_ABI = [
         name: "timestamp",
         type: "uint256",
       },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "expirationTime",
+        type: "uint256",
+      },
     ],
     name: "PacketCreated",
     type: "event",
@@ -115,6 +121,37 @@ export const RED_PACKET_ABI = [
       },
     ],
     name: "PacketFinished",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "packetId",
+        type: "uint256",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "creator",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
+      },
+    ],
+    name: "PacketRefunded",
     type: "event",
   },
   {
@@ -141,6 +178,11 @@ export const RED_PACKET_ABI = [
         internalType: "bool",
         name: "isRandom",
         type: "bool",
+      },
+      {
+        internalType: "uint256",
+        name: "duration",
+        type: "uint256",
       },
     ],
     name: "createPacket",
@@ -189,6 +231,11 @@ export const RED_PACKET_ABI = [
         type: "uint256",
       },
       {
+        internalType: "uint256",
+        name: "expirationTime",
+        type: "uint256",
+      },
+      {
         internalType: "bool",
         name: "isRandom",
         type: "bool",
@@ -219,6 +266,19 @@ export const RED_PACKET_ABI = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "packetId",
+        type: "uint256",
+      },
+    ],
+    name: "refundExpiredPacket",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {

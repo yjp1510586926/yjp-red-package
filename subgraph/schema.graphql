@@ -1,4 +1,4 @@
-type Packet @entity {
+type Packet @entity(immutable: false) {
   id: ID!
   packetId: BigInt!
   creator: Bytes!
@@ -8,25 +8,26 @@ type Packet @entity {
   remainCount: BigInt!
   isRandom: Boolean!
   timestamp: BigInt!
+  expirationTime: BigInt!
   isFinished: Boolean!
   claims: [Claim!]! @derivedFrom(field: "packet")
   createdAt: BigInt!
   finishedAt: BigInt
 }
 
-type Claim @entity {
+type Claim @entity(immutable: true) {
   id: ID!
   packet: Packet!
-  claimer: Bytes!
+  claimer: User!
   amount: BigInt!
   timestamp: BigInt!
 }
 
-type User @entity {
+type User @entity(immutable: false) {
   id: ID!
   address: Bytes!
   packetsCreated: [Packet!]!
-  claimsMade: [Claim!]! @derivedFrom(field: "claimer")
+  claims: [Claim!]! @derivedFrom(field: "claimer")
   totalClaimed: BigInt!
   totalCreated: BigInt!
 }
